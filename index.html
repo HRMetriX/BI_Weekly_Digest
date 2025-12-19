@@ -951,9 +951,10 @@ body {
     const stored = sessionStorage.getItem('bi_auth_v2');
     
     if (!stored) {
-        // ПОКАЗЫВАЕМ БЛОКИРОВКУ СРАЗУ, пока проверяется пароль
-        showLoadingScreen();
+        // Сразу скрываем body, но НЕ заменяем весь HTML
+        document.body.style.display = 'none';
         
+        // Запрашиваем пароль
         const input = prompt('🔐 BI WEEKLY DIGEST\n\nВведите пароль для доступа:');
         
         if (!input) {
@@ -961,10 +962,15 @@ body {
             return;
         }
         
+        // Показываем экран проверки
+        showLoadingScreen();
+        
         // Асинхронная проверка пароля
         checkPassword(input).then(isValid => {
             if (isValid) {
                 sessionStorage.setItem('bi_auth_v2', 'true');
+                // Показываем контент и перезагружаем
+                document.body.style.display = 'block';
                 location.reload();
             } else {
                 showAccessDenied();
@@ -973,65 +979,46 @@ body {
             showAccessDenied();
         });
         
-        // ВОЗВРАЩАЕМ УПРАВЛЕНИЕ, но контент уже скрыт
         return;
     }
     
     // ===== ФУНКЦИИ =====
     
     function showLoadingScreen() {
-        // Скрываем body сразу
-        document.body.style.display = 'none';
+        // Создаём overlay поверх всего
+        const overlay = document.createElement('div');
+        overlay.id = 'auth-overlay';
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a1f35 0%, #2F364E 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        `;
         
-        // Показываем экран загрузки
-        document.documentElement.innerHTML = `
-            <!DOCTYPE html>
-            <html lang="ru">
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Проверка доступа...</title>
+        overlay.innerHTML = `
+            <div style="text-align: center; padding: 20px;">
+                <div style="width: 50px; height: 50px; border: 3px solid rgba(255, 204, 51, 0.3);
+                           border-radius: 50%; border-top-color: #FFCC33;
+                           animation: spin 1s linear infinite; margin: 0 auto 20px;"></div>
+                <h2 style="color: #FFCC33; margin-bottom: 10px;">Проверка доступа...</h2>
+                <p>Идёт проверка пароля. Пожалуйста, подождите.</p>
                 <style>
-                    * { margin: 0; padding: 0; box-sizing: border-box; }
-                    body {
-                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-                        background: linear-gradient(135deg, #1a1f35 0%, #2F364E 100%);
-                        color: white;
-                        min-height: 100vh;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                    }
-                    .loader {
-                        text-align: center;
-                    }
-                    .spinner {
-                        width: 50px;
-                        height: 50px;
-                        border: 3px solid rgba(255, 204, 51, 0.3);
-                        border-radius: 50%;
-                        border-top-color: #FFCC33;
-                        animation: spin 1s linear infinite;
-                        margin: 0 auto 20px;
-                    }
                     @keyframes spin {
                         to { transform: rotate(360deg); }
                     }
-                    h2 {
-                        color: #FFCC33;
-                        margin-bottom: 10px;
-                    }
                 </style>
-            </head>
-            <body>
-                <div class="loader">
-                    <div class="spinner"></div>
-                    <h2>Проверка доступа...</h2>
-                    <p>Идёт проверка пароля. Пожалуйста, подождите.</p>
-                </div>
-            </body>
-            </html>
+            </div>
         `;
+        
+        document.documentElement.appendChild(overlay);
     }
     
     async function checkPassword(password) {
@@ -1053,6 +1040,7 @@ body {
     }
     
     function showAccessDenied() {
+        // Полностью заменяем документ
         document.documentElement.innerHTML = `
             <!DOCTYPE html>
             <html lang="ru">
