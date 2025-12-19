@@ -947,45 +947,50 @@ body {
     const CORRECT_HASH = '4703047457811c42622db2e6d0f3d48560ff1bdcca8c3fa8529016a0361b37a2';
     const SALT = '__get_the_fuck_out';
     
-    // Проверка доступа
-    const stored = sessionStorage.getItem('bi_auth_v2');
-    
-    if (!stored) {
-        // Сразу скрываем body, но НЕ заменяем весь HTML
-        document.body.style.display = 'none';
+    // Ждём загрузки DOM
+    document.addEventListener('DOMContentLoaded', function() {
+        // Проверка доступа
+        const stored = sessionStorage.getItem('bi_auth_v2');
         
-        // Запрашиваем пароль
-        const input = prompt('🔐 BI WEEKLY DIGEST\n\nВведите пароль для доступа:');
-        
-        if (!input) {
-            showAccessDenied();
-            return;
+        if (!stored) {
+            // Сразу скрываем body
+            document.body.style.display = 'none';
+            
+            // Небольшая задержка для гарантии, что body скрыт
+            setTimeout(() => {
+                // Запрашиваем пароль
+                const input = prompt('🔐 BI WEEKLY DIGEST\n\nВведите пароль для доступа:');
+                
+                if (!input) {
+                    showAccessDenied();
+                    return;
+                }
+                
+                // Показываем экран проверки
+                showLoadingScreen();
+                
+                // Асинхронная проверка пароля
+                checkPassword(input).then(isValid => {
+                    if (isValid) {
+                        sessionStorage.setItem('bi_auth_v2', 'true');
+                        // Показываем контент
+                        document.body.style.display = 'block';
+                        hideLoadingScreen();
+                        // Перезагружаем, чтобы анимации сработали
+                        location.reload();
+                    } else {
+                        showAccessDenied();
+                    }
+                }).catch(() => {
+                    showAccessDenied();
+                });
+            }, 100);
         }
-        
-        // Показываем экран проверки
-        showLoadingScreen();
-        
-        // Асинхронная проверка пароля
-        checkPassword(input).then(isValid => {
-            if (isValid) {
-                sessionStorage.setItem('bi_auth_v2', 'true');
-                // Показываем контент и перезагружаем
-                document.body.style.display = 'block';
-                location.reload();
-            } else {
-                showAccessDenied();
-            }
-        }).catch(() => {
-            showAccessDenied();
-        });
-        
-        return;
-    }
+    });
     
     // ===== ФУНКЦИИ =====
     
     function showLoadingScreen() {
-        // Создаём overlay поверх всего
         const overlay = document.createElement('div');
         overlay.id = 'auth-overlay';
         overlay.style.cssText = `
@@ -1018,7 +1023,14 @@ body {
             </div>
         `;
         
-        document.documentElement.appendChild(overlay);
+        document.body.appendChild(overlay);
+    }
+    
+    function hideLoadingScreen() {
+        const overlay = document.getElementById('auth-overlay');
+        if (overlay) {
+            overlay.remove();
+        }
     }
     
     async function checkPassword(password) {
