@@ -940,73 +940,181 @@ body {
     <!-- SCRIPTS -->
     <script>
 
-    // ===== ПАРОЛЬНАЯ ЗАЩИТА =====
-    const PASS = 'BI_Digest_2025'; // СМЕНИ НА СВОЙ ПАРОЛЬ
-    const stored = sessionStorage.getItem('bi_auth');
+// ===== ПАРОЛЬНАЯ ЗАЩИТА С ХЭШИРОВАНИЕМ =====
+(function() {
+    'use strict';
+    
+
+    const CORRECT_HASH = '4703047457811c42622db2e6d0f3d48560ff1bdcca8c3fa8529016a0361b37a2';
+    const SALT = '__get_the_fuck_out'; // Можешь изменить эту соль
+    
+    // Проверка доступа
+    const stored = sessionStorage.getItem('bi_auth_v2');
     
     if (!stored) {
-        const input = prompt('🔒 Введите пароль для доступа к BI Weekly Digest:');
+        const input = prompt('🔐 BI WEEKLY DIGEST\n\nВведите пароль для доступа:');
         
-        if (input === PASS) {
-            sessionStorage.setItem('bi_auth', 'true');
-        } else {
-            // Показываем экран блокировки
-            document.write(`
+        if (!input) {
+            showAccessDenied();
+            return;
+        }
+        
+        // Асинхронная проверка пароля
+        checkPassword(input).then(isValid => {
+            if (isValid) {
+                sessionStorage.setItem('bi_auth_v2', 'true');
+                // Перезагружаем для чистого старта
+                location.reload();
+            } else {
+                showAccessDenied();
+            }
+        }).catch(() => {
+            showAccessDenied();
+        });
+        
+        // Не продолжаем выполнение остального кода
+        throw new Error('Password check in progress');
+    }
+    
+    // ===== ФУНКЦИИ =====
+    
+    async function checkPassword(password) {
+        try {
+            // Хэшируем введённый пароль с солью
+            const hash = await sha256(password + SALT);
+            return hash === CORRECT_HASH;
+        } catch {
+            return false;
+        }
+    }
+    
+    async function sha256(message) {
+        // Преобразуем в байты
+        const encoder = new TextEncoder();
+        const data = encoder.encode(message);
+        
+        // Хэшируем
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        
+        // Конвертируем в hex строку
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        
+        return hashHex;
+    }
+    
+    function showAccessDenied() {
+        document.write(`
+            <!DOCTYPE html>
+            <html lang="ru">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Доступ ограничен</title>
                 <style>
+                    * { margin: 0; padding: 0; box-sizing: border-box; }
                     body {
-                        margin: 0;
-                        padding: 0;
-                        background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-                        font-family: 'Inter', sans-serif;
-                        color: #2F364E;
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                        background: linear-gradient(135deg, #1a1f35 0%, #2F364E 100%);
+                        color: white;
                         min-height: 100vh;
                         display: flex;
                         align-items: center;
                         justify-content: center;
+                        padding: 20px;
                     }
-                    .blocked-container {
-                        text-align: center;
+                    .container {
                         max-width: 500px;
-                        padding: 3rem;
-                        background: white;
+                        text-align: center;
+                        background: rgba(255, 255, 255, 0.05);
+                        padding: 40px 30px;
                         border-radius: 20px;
-                        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-                        border: 1px solid #E9ECEF;
+                        backdrop-filter: blur(10px);
+                        border: 1px solid rgba(255, 204, 51, 0.1);
+                        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
                     }
-                    h1 { color: #ED1925; margin-bottom: 1rem; }
-                    button {
-                        background: #2F364E;
-                        color: white;
+                    .lock-icon {
+                        font-size: 64px;
+                        margin-bottom: 20px;
+                        color: #FFCC33;
+                    }
+                    h1 {
+                        color: #FFCC33;
+                        margin-bottom: 15px;
+                        font-size: 28px;
+                    }
+                    p {
+                        color: rgba(255, 255, 255, 0.8);
+                        line-height: 1.6;
+                        margin-bottom: 10px;
+                    }
+                    .error-code {
+                        background: rgba(237, 25, 37, 0.1);
+                        border: 1px solid rgba(237, 25, 37, 0.3);
+                        border-radius: 10px;
+                        padding: 15px;
+                        margin: 25px 0;
+                        font-family: monospace;
+                        font-size: 14px;
+                        color: rgba(255, 255, 255, 0.9);
+                    }
+                    .retry-btn {
+                        background: #FFCC33;
+                        color: #2F364E;
                         border: none;
-                        padding: 12px 30px;
+                        padding: 14px 35px;
                         border-radius: 25px;
+                        font-size: 16px;
                         font-weight: 600;
                         cursor: pointer;
                         transition: all 0.3s ease;
-                        margin-top: 1.5rem;
+                        margin-top: 20px;
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 10px;
                     }
-                    button:hover {
-                        background: #FFCC33;
-                        color: #2F364E;
+                    .retry-btn:hover {
+                        background: #ffd966;
                         transform: translateY(-2px);
+                        box-shadow: 0 10px 20px rgba(255, 204, 51, 0.3);
+                    }
+                    .footer {
+                        margin-top: 30px;
+                        padding-top: 20px;
+                        border-top: 1px solid rgba(255, 255, 255, 0.1);
+                        font-size: 14px;
+                        color: rgba(255, 255, 255, 0.5);
                     }
                 </style>
-                <div class="blocked-container">
-                    <div style="font-size: 4rem; margin-bottom: 1rem;">🔒</div>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="lock-icon">🔒</div>
                     <h1>Доступ ограничен</h1>
-                    <p>Неверный пароль. Этот дайджест доступен только для команды BI Analytics.</p>
-                    <p style="color: #6C757D; margin-top: 1rem;">Для получения доступа обратитесь к руководителю команды.</p>
+                    <p>Неверный пароль или истёк срок действия доступа.</p>
+                    <p>Этот дайджест предназначен только для членов команды BI Analytics.</p>
                     
-                    <button onclick="location.reload()">
-                        🔄 Попробовать снова
+                    <div class="error-code">
+                        Ошибка: AUTH_2025_ACCESS_DENIED<br>
+                        Код: 0xBI_DIGEST_SECURITY
+                    </div>
+                    
+                    <button class="retry-btn" onclick="location.reload()">
+                        <span>🔄</span> Попробовать снова
                     </button>
+                    
+                    <div class="footer">
+                        BI Weekly Digest • Версия 3.5 • Только для внутреннего использования
+                    </div>
                 </div>
-            `);
-            
-            // Останавливаем выполнение скриптов
-            throw new Error('Access denied');
-        }
-    }        
+            </body>
+            </html>
+        `);
+        
+        // Останавливаем выполнение
+        throw new Error('Access denied to BI Weekly Digest');
+    }
+})();   
 
         
         // Simple animations on scroll
