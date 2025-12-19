@@ -944,14 +944,16 @@ body {
 (function() {
     'use strict';
     
-
     const CORRECT_HASH = '4703047457811c42622db2e6d0f3d48560ff1bdcca8c3fa8529016a0361b37a2';
-    const SALT = '__get_the_fuck_out'; // Можешь изменить эту соль
+    const SALT = '__get_the_fuck_out';
     
     // Проверка доступа
     const stored = sessionStorage.getItem('bi_auth_v2');
     
     if (!stored) {
+        // ПОКАЗЫВАЕМ БЛОКИРОВКУ СРАЗУ, пока проверяется пароль
+        showLoadingScreen();
+        
         const input = prompt('🔐 BI WEEKLY DIGEST\n\nВведите пароль для доступа:');
         
         if (!input) {
@@ -963,7 +965,6 @@ body {
         checkPassword(input).then(isValid => {
             if (isValid) {
                 sessionStorage.setItem('bi_auth_v2', 'true');
-                // Перезагружаем для чистого старта
                 location.reload();
             } else {
                 showAccessDenied();
@@ -972,15 +973,69 @@ body {
             showAccessDenied();
         });
         
-        // Не продолжаем выполнение остального кода
-        throw new Error('Password check in progress');
+        // ВОЗВРАЩАЕМ УПРАВЛЕНИЕ, но контент уже скрыт
+        return;
     }
     
     // ===== ФУНКЦИИ =====
     
+    function showLoadingScreen() {
+        // Скрываем body сразу
+        document.body.style.display = 'none';
+        
+        // Показываем экран загрузки
+        document.documentElement.innerHTML = `
+            <!DOCTYPE html>
+            <html lang="ru">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Проверка доступа...</title>
+                <style>
+                    * { margin: 0; padding: 0; box-sizing: border-box; }
+                    body {
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                        background: linear-gradient(135deg, #1a1f35 0%, #2F364E 100%);
+                        color: white;
+                        min-height: 100vh;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    }
+                    .loader {
+                        text-align: center;
+                    }
+                    .spinner {
+                        width: 50px;
+                        height: 50px;
+                        border: 3px solid rgba(255, 204, 51, 0.3);
+                        border-radius: 50%;
+                        border-top-color: #FFCC33;
+                        animation: spin 1s linear infinite;
+                        margin: 0 auto 20px;
+                    }
+                    @keyframes spin {
+                        to { transform: rotate(360deg); }
+                    }
+                    h2 {
+                        color: #FFCC33;
+                        margin-bottom: 10px;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="loader">
+                    <div class="spinner"></div>
+                    <h2>Проверка доступа...</h2>
+                    <p>Идёт проверка пароля. Пожалуйста, подождите.</p>
+                </div>
+            </body>
+            </html>
+        `;
+    }
+    
     async function checkPassword(password) {
         try {
-            // Хэшируем введённый пароль с солью
             const hash = await sha256(password + SALT);
             return hash === CORRECT_HASH;
         } catch {
@@ -989,22 +1044,16 @@ body {
     }
     
     async function sha256(message) {
-        // Преобразуем в байты
         const encoder = new TextEncoder();
         const data = encoder.encode(message);
-        
-        // Хэшируем
         const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-        
-        // Конвертируем в hex строку
         const hashArray = Array.from(new Uint8Array(hashBuffer));
         const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-        
         return hashHex;
     }
     
     function showAccessDenied() {
-        document.write(`
+        document.documentElement.innerHTML = `
             <!DOCTYPE html>
             <html lang="ru">
             <head>
@@ -1109,12 +1158,9 @@ body {
                 </div>
             </body>
             </html>
-        `);
-        
-        // Останавливаем выполнение
-        throw new Error('Access denied to BI Weekly Digest');
+        `;
     }
-})();   
+})();
 
         
         // Simple animations on scroll
