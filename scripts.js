@@ -2,7 +2,7 @@
 (function() {
     'use strict';
     
-    const CORRECT_HASH = '4da83d5031d8dcb3715f86a02d3f17dbba59d9f08e51e1eb47dd37cead19af41';
+    const CORRECT_HASH = 'ebe643bc083ddee6761a84b6656dd2729ed031237587a1d42eb9e6e4d7a1481d';
     const SALT = '__get_the_fuck_out';
     
     // Ждём загрузки DOM
